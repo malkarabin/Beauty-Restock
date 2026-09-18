@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Restock My Cosmetics">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fbb0d6"/>
+      <stop offset="1" stop-color="#e5308a"/>
+    </linearGradient>
+    <linearGradient id="lip" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ef6a88"/>
+      <stop offset="1" stop-color="#b83a5a"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f6d79a"/>
+      <stop offset="1" stop-color="#e0af61"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <g>
+    <!-- tube body -->
+    <rect x="214" y="250" width="84" height="156" rx="16" fill="#f7edf1"/>
+    <rect x="214" y="250" width="84" height="24" rx="4" fill="#ead9e0"/>
+    <!-- gold ring -->
+    <rect x="209" y="208" width="94" height="50" rx="10" fill="url(#gold)"/>
+    <!-- bullet (lipstick paste), slanted top -->
+    <path d="M214 208 L214 150 Q214 120 246 118 L298 152 L298 208 Z" fill="url(#lip)"/>
+    <path d="M226 200 L226 156 Q226 138 240 133 L240 200 Z" fill="#ffffff" opacity="0.28"/>
+  </g>
+</svg>

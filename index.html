@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#e5308a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Restock" />
+  <title>Restock My Cosmetics — הקוסמטיקה שלי לרכישה חוזרת</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/icon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header__inner">
+      <button id="menuBtn" class="icon-btn" aria-label="גיבוי ושחזור" title="גיבוי ושחזור">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <h1 class="app-title"><span id="appTitle">Restock</span><span class="app-title__tag" id="appTag">הקוסמטיקה שלי</span></h1>
+      <span class="app-header__spacer"></span>
+    </div>
+    <div id="shelfTools">
+      <div class="toolbar">
+        <div class="search-wrap">
+          <svg class="search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3" stroke-linecap="round"/></svg>
+          <input id="search" type="search" inputmode="search" placeholder="חיפוש במדף שלי: שם, מותג, גוון, מק״ט..." aria-label="חיפוש במדף שלי" />
+          <button id="searchClear" class="search-clear hidden" type="button" aria-label="ניקוי חיפוש">✕</button>
+        </div>
+      </div>
+      <div id="filters" class="filters" role="tablist" aria-label="סינון לפי קטגוריה"></div>
+      <div id="filterBar" class="filter-bar hidden">
+        <span id="filterCount"></span>
+        <button id="clearFilters" class="filter-clear" type="button">נקה סינון ✕</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="list" class="list" aria-live="polite"></main>
+
+  <div id="emptyShelf" class="empty hidden">
+    <div class="empty__art">💄</div>
+    <h2>עוד אין מוצרים</h2>
+    <p>הוסיפי את המוצר הראשון שלך — הדגם, הגוון ומספר הספק, כדי שתמיד תדעי בדיוק מה לקנות שוב.</p>
+  </div>
+
+  <button id="addBtn" class="fab" type="button" aria-label="הוספת מוצר">
+    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+  </button>
+
+  <!-- Product editor sheet -->
+  <div id="sheet" class="sheet hidden" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="sheet__backdrop" data-close></div>
+    <form id="form" class="sheet__panel" autocomplete="off">
+      <div class="sheet__grip"></div>
+      <div class="sheet__head">
+        <button type="button" class="text-btn" data-close>ביטול</button>
+        <h2 id="sheetTitle">מוצר חדש</h2>
+        <span class="app-header__spacer"></span>
+      </div>
+
+      <div class="sheet__body">
+        <div class="photo-field">
+          <div id="photoPreview" class="photo-preview" aria-hidden="true">
+            <span class="photo-preview__hint">📷 צילום המוצר</span>
+          </div>
+          <div class="photo-actions">
+            <label class="chip-btn">
+              📷 צילום / העלאה
+              <input id="photoInput" type="file" accept="image/*" capture="environment" hidden />
+            </label>
+            <label class="chip-btn chip-btn--accent">
+              🔎 סרוק מדבקה
+              <input id="ocrInput" type="file" accept="image/*" capture="environment" hidden />
+            </label>
+            <button type="button" id="removePhoto" class="chip-btn chip-btn--ghost hidden">הסרת תמונה</button>
+          </div>
+        </div>
+        <div id="ocrResult" class="ocr-result hidden">
+          <div id="ocrStatus" class="ocr-status"></div>
+          <details class="ocr-raw">
+            <summary>הטקסט המלא שזוהה</summary>
+            <div id="ocrText" class="ocr-text-view"></div>
+          </details>
+        </div>
+
+        <label class="field">
+          <span class="field__label">שם המוצר <em>*</em></span>
+          <input id="f_name" name="name" type="text" required placeholder="למשל: פאונדיישן מקדים" />
+        </label>
+
+        <div class="field-row">
+          <label class="field">
+            <span class="field__label">מותג</span>
+            <input id="f_brand" name="brand" type="text" placeholder="MAC, Maybelline..." list="brandList" />
+          </label>
+          <label class="field">
+            <span class="field__label">קטגוריה</span>
+            <select id="f_category" name="category"></select>
+          </label>
+        </div>
+
+        <div class="field-row">
+          <label class="field">
+            <span class="field__label">גוון</span>
+            <input id="f_shade" name="shade" type="text" placeholder="שם הגוון: Nude, ורוד..." />
+          </label>
+          <label class="field">
+            <span class="field__label">מספר גוון</span>
+            <input id="f_shadeNumber" name="shadeNumber" type="text" placeholder="120 / NC20" />
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="field__label">דגם</span>
+          <input id="f_model" name="model" type="text" placeholder="שם או מספר דגם" />
+        </label>
+
+        <label class="field field--highlight">
+          <span class="field__label">מספר ספק / מק״ט</span>
+          <input id="f_supplier" name="supplierNumber" type="text" inputmode="text" placeholder="המספר שמופיע על האריזה" />
+        </label>
+
+        <div class="field-row">
+          <label class="field">
+            <span class="field__label">איפה קונים</span>
+            <input id="f_store" name="store" type="text" placeholder="חנות / אתר" list="storeList" />
+          </label>
+          <label class="field">
+            <span class="field__label">מחיר אחרון</span>
+            <input id="f_price" name="price" type="text" inputmode="decimal" placeholder="₪" />
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="field__label">הערות</span>
+          <textarea id="f_notes" name="notes" rows="2" placeholder="למשל: מתאים לעור יבש, נגמר מהר..."></textarea>
+        </label>
+
+        <button type="button" id="deleteBtn" class="delete-btn hidden">מחיקת המוצר</button>
+      </div>
+      <div class="sheet__footer">
+        <button type="submit" class="save-btn">💾 שמירת המוצר</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Detail sheet -->
+  <div id="detail" class="sheet hidden" role="dialog" aria-modal="true" aria-labelledby="detailName">
+    <div class="sheet__backdrop" data-close-detail></div>
+    <div class="sheet__panel">
+      <div class="sheet__grip"></div>
+      <div class="sheet__head">
+        <button type="button" class="text-btn text-btn--back" data-close-detail>→ חזרה</button>
+        <h2 id="detailName">פרטי מוצר</h2>
+        <button type="button" id="editFromDetail" class="text-btn text-btn--primary">עריכה</button>
+      </div>
+      <div id="detailBody" class="sheet__body detail-body"></div>
+    </div>
+  </div>
+
+  <!-- Backup menu -->
+  <div id="backup" class="sheet hidden" role="dialog" aria-modal="true" aria-labelledby="backupTitle">
+    <div class="sheet__backdrop" data-close-backup></div>
+    <div class="sheet__panel sheet__panel--short">
+      <div class="sheet__grip"></div>
+      <div class="sheet__head">
+        <button type="button" class="text-btn text-btn--back" data-close-backup>→ חזרה</button>
+        <h2 id="backupTitle">גיבוי ושחזור</h2>
+        <span class="app-header__spacer"></span>
+      </div>
+      <div class="sheet__body">
+        <p class="backup-note">הנתונים נשמרים רק במכשיר הזה. כדאי לייצא גיבוי מדי פעם — כך לא תאבדי כלום גם אם תחליפי טלפון.</p>
+        <button type="button" id="exportBtn" class="wide-btn">📤 ייצוא גיבוי (קובץ)</button>
+        <label class="wide-btn wide-btn--ghost">
+          📥 שחזור מגיבוי
+          <input id="importInput" type="file" accept="application/json,.json" hidden />
+        </label>
+        <p class="backup-count" id="backupCount"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- "Where to buy" chooser (שלב 2 — גרסת בסיס) -->
+  <div id="buy" class="sheet hidden" role="dialog" aria-modal="true" aria-labelledby="buyTitle">
+    <div class="sheet__backdrop" data-close-buy></div>
+    <div class="sheet__panel sheet__panel--short">
+      <div class="sheet__grip"></div>
+      <div class="sheet__head">
+        <button type="button" class="text-btn text-btn--back" data-close-buy>→ חזרה</button>
+        <h2 id="buyTitle">איפה קונים?</h2>
+        <span class="app-header__spacer"></span>
+      </div>
+      <div class="sheet__body">
+        <p id="buyProduct" class="buy-product"></p>
+        <p id="savedStore" class="saved-store hidden"></p>
+        <p class="field__label">איפה לחפש?</p>
+        <div class="buy-loc">
+          <button type="button" id="buyHere" class="loc-btn loc-btn--active">📍 המיקום שלי</button>
+          <button type="button" id="buyCityBtn" class="loc-btn">🗺️ עיר אחרת</button>
+        </div>
+        <input id="buyCity" class="loc-city hidden" type="text" list="buyCityList" placeholder="הקלידי או בחרי עיר…" autocomplete="off" enterkeyhint="search" aria-label="בחירת עיר" />
+        <datalist id="buyCityList"></datalist>
+        <p id="buyLocNote" class="buy-loc-note"></p>
+        <div class="buy-actions">
+          <a id="buyGo" class="wide-btn" target="_blank" rel="noopener" href="#">🔍 חפש חנויות שמוכרות</a>
+          <a id="buyGoBroad" class="wide-btn wide-btn--ghost" target="_blank" rel="noopener" href="#">🔎 חיפוש רחב יותר (בלי מספר דגם)</a>
+        </div>
+        <div class="save-store">
+          <input id="storeInput" type="text" placeholder="מצאת חנות טובה? שמרי אותה כאן" aria-label="שם החנות לשמירה" />
+          <button type="button" id="saveStore" class="chip-btn">⭐ שמור</button>
+        </div>
+        <p class="buy-hint">נפתחת מפת Google עם חנויות שמוכרות את המוצר — לפי המיקום הנוכחי שלך או העיר שבחרת. שמירת חנות עוזרת למצוא אותה בקלות בפעם הבאה.</p>
+      </div>
+    </div>
+  </div>
+
+  <datalist id="brandList"></datalist>
+  <datalist id="storeList"></datalist>
+
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <script src="db.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
