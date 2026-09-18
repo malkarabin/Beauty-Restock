@@ -705,6 +705,14 @@
     return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q);
   }
 
+  // חיפוש רגיל בגוגל (לא מפות) — להגיע לאתרי חנויות אונליין שמוכרות את המוצר
+  function webSearchUrl(terms) {
+    return 'https://www.google.com/search?q=' + encodeURIComponent(terms);
+  }
+  function productTerms(p) {
+    return [p.brand, p.name, p.shade, p.shadeNumber, p.model].filter(Boolean).join(' ');
+  }
+
   // מעדכן את הקישורים: מחפשים קודם כל *חנויות קוסמטיקה* קרובות (ולא את מחרוזת
   // המוצר המלאה — שגרמה למפות להחזיר עסקים אקראיים/הזויים). המוצר משמש כהקשר בלבד.
   function updateBuyLinks() {
@@ -712,6 +720,8 @@
     const city = buyMode === 'city' ? ($('#buyCity').value || '') : '';
     $('#buyGo').href = mapsUrl('חנות קוסמטיקה', city);
     $('#buyGoPharm').href = mapsUrl('בית מרקחת פארם', city);
+    const online = $('#buyGoOnline');
+    if (online) online.href = webSearchUrl((productTerms(buyProduct) || buyProduct.name || '') + ' קנייה אונליין');
     const brand = (buyProduct.brand || '').trim();
     const brandBtn = $('#buyGoBrand');
     if (brandBtn) {
