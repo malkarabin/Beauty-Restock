@@ -1,5 +1,5 @@
 /* sw.js — Service Worker לעבודה אופליין */
-const CACHE = 'restock-v2';
+const CACHE = 'restock-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -37,19 +37,16 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // נכסים מאותו מקור: cache-first + עדכון רקע
+  // נכסים מאותו מקור: network-first (תמיד הגרסה הכי עדכנית) + נפילה לקאש כשאין רשת
   if (url.origin === location.origin) {
     event.respondWith(
-      caches.match(req).then((cached) => {
-        const network = fetch(req).then((res) => {
-          if (res && res.status === 200) {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(req, copy));
-          }
-          return res;
-        }).catch(() => cached);
-        return cached || network;
-      })
+      fetch(req).then((res) => {
+        if (res && res.status === 200) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, copy));
+        }
+        return res;
+      }).catch(() => caches.match(req))
     );
   }
 });

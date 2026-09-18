@@ -283,7 +283,7 @@ button { cursor: pointer; }
 .wide-btn--link { background: transparent; color: var(--ink-soft); font-weight: 600; font-size: .92rem; padding: 10px; }
 .wide-btn:active { transform: scale(.985); }
 a.wide-btn { text-decoration: none; display: block; }
-.loc-city { width: 100%; margin-bottom: 16px; }
+.loc-city { width: 100%; }
 .backup-count { text-align: center; color: var(--muted); font-size: .86rem; margin-top: 6px; }
 
 /* ---------- Where to buy ---------- */
@@ -298,11 +298,24 @@ a.wide-btn { text-decoration: none; display: block; }
   border-radius: 12px; padding: 11px; font-weight: 600;
 }
 .loc-btn--active { background: var(--rose); color: #fff; border-color: var(--rose); }
+.loc-city-wrap { position: relative; width: 100%; margin-bottom: 16px; }
 .loc-city {
-  flex: 1; border: 1px solid var(--line); border-radius: 12px; padding: 11px;
+  width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: 11px;
   background: #fff; color: var(--ink); outline: none;
 }
-.loc-city.active { border-color: var(--rose); box-shadow: 0 0 0 3px rgba(244,184,205,.35); }
+.loc-city:focus { border-color: var(--rose); box-shadow: 0 0 0 3px rgba(244,184,205,.35); }
+.city-options {
+  list-style: none; margin: 6px 0 0; padding: 4px;
+  position: absolute; inset-inline: 0; top: 100%; z-index: 40;
+  background: #fff; border: 1px solid var(--rose-soft); border-radius: 12px;
+  box-shadow: 0 10px 26px rgba(0,0,0,.12); max-height: 240px; overflow-y: auto;
+}
+.city-option {
+  padding: 11px 12px; border-radius: 9px; cursor: pointer;
+  color: var(--ink); font-size: 1rem;
+}
+.city-option:hover, .city-option:active { background: var(--rose-tint); }
+.city-option--add { color: var(--rose-deep); font-weight: 600; border-top: 1px dashed var(--rose-soft); margin-top: 2px; }
 .buy-actions { display: flex; flex-direction: column; gap: 4px; }
 .buy-hint { color: var(--muted); font-size: .82rem; text-align: center; margin: 10px 0 0; }
 .buy-loc-note { text-align: center; font-size: .82rem; color: var(--rose-deep); margin: 0 0 14px; min-height: 1em; }

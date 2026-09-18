@@ -121,8 +121,11 @@
     document.querySelectorAll('[data-close-buy]').forEach((el) => el.addEventListener('click', closeBuy));
     $('#buyHere').addEventListener('click', () => setBuyMode('here'));
     $('#buyCityBtn').addEventListener('click', () => setBuyMode('city'));
-    $('#buyCity').addEventListener('input', updateBuyLinks);
-    $('#buyCity').addEventListener('change', updateBuyLinks);
+    $('#buyCity').addEventListener('input', () => { renderCityOptions(); updateBuyLinks(); });
+    $('#buyCity').addEventListener('focus', renderCityOptions);
+    $('#buyCity').addEventListener('blur', () => setTimeout(closeCityOptions, 150));
+    // mousedown (במקום click) כדי שהבחירה תתפוס לפני שה-blur מסתיר את הרשימה
+    $('#buyCityOptions').addEventListener('mousedown', onCityOptionPick);
     $('#saveStore').addEventListener('click', onSaveStore);
     $('#storeInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); onSaveStore(); } });
 
@@ -503,18 +506,84 @@
     else setOcrStatus('זיהיתי טקסט אך לא הצלחתי לשייך שדות. פתחי את "הטקסט המלא" למטה.');
   }
 
+  // ============ רשימת ערים + חיפוש בהקלדה + שמירת עיר חדשה ============
+  const CUSTOM_CITIES_KEY = 'restock_custom_cities';
+  let customCities = loadCustomCities();
+
+  function loadCustomCities() {
+    try { return JSON.parse(localStorage.getItem(CUSTOM_CITIES_KEY)) || []; }
+    catch (e) { return []; }
+  }
+  function persistCustomCities() {
+    try { localStorage.setItem(CUSTOM_CITIES_KEY, JSON.stringify(customCities)); }
+    catch (e) { /* אחסון חסום — נמשיך בלי שמירה */ }
+  }
+  // כל הערים: המותאמות אישית קודם, בלי כפילויות
+  function allCities() {
+    const seen = new Set(); const out = [];
+    for (const c of customCities.concat(ISRAELI_CITIES)) {
+      const k = (c || '').trim();
+      if (k && !seen.has(k)) { seen.add(k); out.push(k); }
+    }
+    return out;
+  }
+  function saveCustomCity(name) {
+    const c = (name || '').trim();
+    if (!c) return;
+    if (allCities().some((x) => x === c)) return;   // כבר קיימת
+    customCities.unshift(c);
+    persistCustomCities();
+  }
+
+  // מרנדר את רשימת ההצעות לפי מה שהוקלד (סינון מכיל, לא רק תחילת מילה)
+  function renderCityOptions() {
+    const input = $('#buyCity');
+    const box = $('#buyCityOptions');
+    if (!input || !box) return;
+    const q = (input.value || '').trim();
+    const list = allCities();
+    const matches = q ? list.filter((c) => c.includes(q)) : list;
+    let html = matches.slice(0, 8).map((c) =>
+      `<li class="city-option" role="option" data-city="${esc(c)}">${esc(c)}</li>`
+    ).join('');
+    // אם העיר שהוקלדה לא נמצאה כלל — מציעים להוסיף ולשמור אותה לפעם הבאה
+    if (q && matches.length === 0) {
+      html += `<li class="city-option city-option--add" role="option" data-add="${esc(q)}">➕ לא ברשימה — הוסיפי ושמרי: "${esc(q)}"</li>`;
+    }
+    box.innerHTML = html;
+    box.classList.toggle('hidden', !html);
+    input.setAttribute('aria-expanded', html ? 'true' : 'false');
+  }
+  function closeCityOptions() {
+    const box = $('#buyCityOptions');
+    if (!box) return;
+    box.classList.add('hidden');
+    const input = $('#buyCity');
+    if (input) input.setAttribute('aria-expanded', 'false');
+  }
+  // בחירה מהרשימה (או הוספת עיר חדשה שנשמרת לפעם הבאה)
+  function onCityOptionPick(e) {
+    const li = e.target.closest('.city-option');
+    if (!li) return;
+    e.preventDefault();               // שומר את הפוקוס בשדה עד שנסיים
+    if (li.dataset.add) {
+      saveCustomCity(li.dataset.add);
+      $('#buyCity').value = li.dataset.add;
+      toast('העיר נשמרה ותופיע בפעם הבאה ✓');
+    } else {
+      $('#buyCity').value = li.dataset.city || '';
+    }
+    closeCityOptions();
+    updateBuyLinks();
+  }
+
   // ============ "איפה קונים" (איתור הפריט) ============
   function openBuy(p) {
     buyProduct = p;
     buyMode = 'here';
-    const sel = $('#buyCity');
-    const dl = $('#buyCityList');
-    if (dl && !dl.dataset.built) {
-      dl.innerHTML = ISRAELI_CITIES.map((c) => `<option value="${esc(c)}"></option>`).join('');
-      dl.dataset.built = '1';
-    }
-    sel.value = '';
-    sel.classList.add('hidden');
+    $('#buyCity').value = '';
+    closeCityOptions();
+    $('#buyCityWrap').classList.add('hidden');
     $('#buyHere').classList.add('loc-btn--active');
     $('#buyCityBtn').classList.remove('loc-btn--active');
     $('#buyProduct').textContent = [p.brand, p.name, p.shade].filter(Boolean).join(' · ') || p.name || '';
@@ -530,9 +599,9 @@
     buyMode = mode;
     $('#buyHere').classList.toggle('loc-btn--active', mode === 'here');
     $('#buyCityBtn').classList.toggle('loc-btn--active', mode === 'city');
-    $('#buyCity').classList.toggle('hidden', mode !== 'city');
-    if (mode === 'here') requestLocation();
-    else setLocNote('');
+    $('#buyCityWrap').classList.toggle('hidden', mode !== 'city');
+    if (mode === 'here') { closeCityOptions(); requestLocation(); }
+    else { setLocNote(''); setTimeout(() => $('#buyCity').focus(), 50); }
     updateBuyLinks();
   }
 

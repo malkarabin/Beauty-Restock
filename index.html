@@ -204,8 +204,10 @@
           <button type="button" id="buyHere" class="loc-btn loc-btn--active">📍 המיקום שלי</button>
           <button type="button" id="buyCityBtn" class="loc-btn">🗺️ עיר אחרת</button>
         </div>
-        <input id="buyCity" class="loc-city hidden" type="text" list="buyCityList" placeholder="הקלידי או בחרי עיר…" autocomplete="off" enterkeyhint="search" aria-label="בחירת עיר" />
-        <datalist id="buyCityList"></datalist>
+        <div id="buyCityWrap" class="loc-city-wrap hidden">
+          <input id="buyCity" class="loc-city" type="text" placeholder="הקלידי עיר (למשל: הוד השרון)…" autocomplete="off" enterkeyhint="search" aria-label="בחירת עיר" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="buyCityOptions" />
+          <ul id="buyCityOptions" class="city-options hidden" role="listbox" aria-label="ערים"></ul>
+        </div>
         <p id="buyLocNote" class="buy-loc-note"></p>
         <div class="buy-actions">
           <a id="buyGo" class="wide-btn" target="_blank" rel="noopener" href="#">🔍 חפש חנויות שמוכרות</a>
