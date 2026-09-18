@@ -451,22 +451,82 @@
     runOCR(file);
   }
 
+  // עיבוד מקדים לתמונה לפני OCR — משפר דיוק דרמטית: הגדלה, גווני אפור ומתיחת ניגודיות.
+  // (Tesseract עצמו עושה בינאריזציה פנימית, לכן די בקלט אפור וברור.)
+  function fileToImage(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+      img.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
+      img.src = url;
+    });
+  }
+  async function preprocessForOCR(file) {
+    try {
+      const img = await fileToImage(file);
+      const srcW = img.naturalWidth || img.width;
+      const srcH = img.naturalHeight || img.height;
+      if (!srcW || !srcH) return file;
+      // הגדלה לרוחב יעד (עוזר לטקסט קטן), עם תקרה כדי לא להעמיס
+      const targetW = Math.min(2200, Math.max(1200, srcW));
+      const ratio = targetW / srcW;
+      const w = Math.round(srcW * ratio);
+      const h = Math.round(srcH * ratio);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0, w, h);
+      const imgData = ctx.getImageData(0, 0, w, h);
+      const d = imgData.data;
+      // גווני אפור + מציאת טווח למתיחת ניגודיות
+      let min = 255, max = 0;
+      const gray = new Float32Array(d.length / 4);
+      for (let i = 0, j = 0; i < d.length; i += 4, j++) {
+        const g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+        gray[j] = g; if (g < min) min = g; if (g > max) max = g;
+      }
+      const range = Math.max(1, max - min);
+      for (let i = 0, j = 0; i < d.length; i += 4, j++) {
+        let v = (gray[j] - min) / range * 255;          // מתיחה לטווח מלא
+        v = (v - 128) * 1.25 + 128;                      // חיזוק ניגודיות מתון
+        v = v < 0 ? 0 : (v > 255 ? 255 : v);
+        d[i] = d[i + 1] = d[i + 2] = v;
+      }
+      ctx.putImageData(imgData, 0, 0);
+      return canvas;
+    } catch (e) {
+      return file; // אם משהו נכשל — נסרוק את המקור
+    }
+  }
+
   async function runOCR(file) {
     $('#ocrResult').classList.remove('hidden');
     $('#ocrText').textContent = '';
     setOcrStatus('טוען מנוע OCR (בפעם הראשונה עשוי לקחת רגע)...');
+    let worker = null;
     try {
       await loadTesseract();
+      setOcrStatus('מכין את התמונה...');
+      const image = await preprocessForOCR(file);
       setOcrStatus('סורק את המדבקה... 0%');
-      const { data } = await window.Tesseract.recognize(file, 'eng+heb', {
+      worker = await window.Tesseract.createWorker('heb+eng', 1, {
         logger: (m) => {
           if (m.status === 'recognizing text') setOcrStatus(`סורק את המדבקה... ${Math.round((m.progress || 0) * 100)}%`);
         },
       });
+      // PSM 6 = בלוק טקסט אחיד (מתאים למדבקות); שמירת רווחים בין מילים
+      await worker.setParameters({
+        tessedit_pageseg_mode: '6',
+        preserve_interword_spaces: '1',
+      });
+      const { data } = await worker.recognize(image);
       fillOcrResult(((data && data.text) || '').trim());
     } catch (err) {
       console.error(err);
       setOcrStatus('לא הצלחתי לסרוק (בדקי חיבור אינטרנט, או נסי תמונה ברורה יותר). אפשר גם למלא ידנית.');
+    } finally {
+      if (worker && worker.terminate) { try { await worker.terminate(); } catch (_) {} }
     }
   }
 
@@ -624,17 +684,6 @@
     );
   }
 
-  // מילות חיפוש: מלא = כל הפרטים; רחב = בלי מספר דגם/גוון (למקרה של טעות או דגם שאזל)
-  function buyTerms(broad) {
-    const p = buyProduct;
-    if (!p) return '';
-    if (broad) {
-      const cat = catById(p.category);
-      return [p.brand, p.name, cat.id !== 'other' ? cat.label : '', p.shade].filter(Boolean).join(' ');
-    }
-    return [p.brand, p.name, p.shade, p.shadeNumber, p.model].filter(Boolean).join(' ');
-  }
-
   // מפה לפי קואורדינטות אמיתיות (המיקום שלי) או לפי טקסט/עיר
   function mapsUrl(terms, city) {
     if (buyMode === 'here' && buyCoords) {
@@ -645,12 +694,24 @@
     return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q);
   }
 
-  // מעדכן את הקישורים (anchor אמיתי — עובד גם כשחלונות קופצים חסומים)
+  // מעדכן את הקישורים: מחפשים קודם כל *חנויות קוסמטיקה* קרובות (ולא את מחרוזת
+  // המוצר המלאה — שגרמה למפות להחזיר עסקים אקראיים/הזויים). המוצר משמש כהקשר בלבד.
   function updateBuyLinks() {
     if (!buyProduct) return;
     const city = buyMode === 'city' ? ($('#buyCity').value || '') : '';
-    $('#buyGo').href = mapsUrl(buyTerms(false) || buyProduct.name || '', city);
-    $('#buyGoBroad').href = mapsUrl(buyTerms(true) || buyProduct.name || '', city);
+    $('#buyGo').href = mapsUrl('חנות קוסמטיקה', city);
+    $('#buyGoPharm').href = mapsUrl('בית מרקחת פארם', city);
+    const brand = (buyProduct.brand || '').trim();
+    const brandBtn = $('#buyGoBrand');
+    if (brandBtn) {
+      if (brand) {
+        brandBtn.href = mapsUrl(brand + ' קוסמטיקה', city);
+        brandBtn.textContent = `🔎 חנויות ${brand}`;
+        brandBtn.classList.remove('hidden');
+      } else {
+        brandBtn.classList.add('hidden');
+      }
+    }
   }
 
   // חנות שמורה למוצר — כדי למצוא אותה שוב בקלות
