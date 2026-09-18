@@ -258,7 +258,7 @@ button { cursor: pointer; }
 
 /* ---------- Detail ---------- */
 .detail-photo { margin: -4px 0 16px; border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); }
-.detail-photo img { width: 100%; display: block; max-height: 42dvh; object-fit: cover; }
+.detail-photo img { width: 100%; display: block; max-height: 30dvh; object-fit: cover; }
 .detail-list { margin: 0; display: flex; flex-direction: column; gap: 2px; }
 .detail-row {
   display: flex; justify-content: space-between; gap: 16px;

@@ -124,6 +124,16 @@
     $('#buyCity').addEventListener('input', () => { renderCityOptions(); updateBuyLinks(); });
     $('#buyCity').addEventListener('focus', renderCityOptions);
     $('#buyCity').addEventListener('blur', () => setTimeout(closeCityOptions, 150));
+    // Enter/חיפוש במקלדת: בוחר את ההתאמה הראשונה, סוגר ומוריד מקלדת
+    $('#buyCity').addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      const first = $('#buyCityOptions').querySelector('.city-option:not(.city-option--add)');
+      if (first && first.dataset.city) $('#buyCity').value = first.dataset.city;
+      closeCityOptions();
+      $('#buyCity').blur();
+      updateBuyLinks();
+    });
     // mousedown (במקום click) כדי שהבחירה תתפוס לפני שה-blur מסתיר את הרשימה
     $('#buyCityOptions').addEventListener('mousedown', onCityOptionPick);
     $('#saveStore').addEventListener('click', onSaveStore);
@@ -634,6 +644,7 @@
       $('#buyCity').value = li.dataset.city || '';
     }
     closeCityOptions();
+    $('#buyCity').blur();   // מוריד את המקלדת כדי שרואים את כפתורי החיפוש
     updateBuyLinks();
   }
 
